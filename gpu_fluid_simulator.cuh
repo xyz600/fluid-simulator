@@ -40,16 +40,12 @@ public:
         , height_(height)
         , pbo_(pbo)
     {
+        gpuErrchk(cudaGraphicsGLRegisterBuffer(&cudapbo_, pbo_, cudaGraphicsRegisterFlagsWriteDiscard));
     }
 
     ~GPUFluidSimulator() {
         gpuErrchk(cudaGLUnregisterBufferObject(pbo));
         gpuErrchk(cudaGraphicsUnregisterResource(cudapbo));
-    }
-
-    void initialize()
-    {
-        gpuErrchk(cudaGraphicsGLRegisterBuffer(&cudapbo_, pbo_, cudaGraphicsRegisterFlagsWriteDiscard));
     }
 
     void draw_background()

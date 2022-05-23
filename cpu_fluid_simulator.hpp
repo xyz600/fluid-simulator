@@ -3,7 +3,7 @@
 #include <GL/glew.h> // GL
 #include <GLFW/glfw3.h>
 #include <cstdint>
-#include <vector>
+#include <memory>
 
 struct Color {
     std::uint8_t x;
@@ -18,30 +18,27 @@ public:
         : width_(width)
         , height_(height)
         , pbo_(pbo)
-        , buffer_(height * width * 4)
-        , frame_(0)
-    {
-    }
-
-    void initialize()
+        , buffer_(new Color[height * width])
+        , velocity_(new float[height * width])
+        , prev_velocity_(new float[height * width])
+        , pressure_(new float[height * width])
+        , prev_pressure_(new float[height * width])
     {
     }
 
     void draw_background()
     {
-        frame_++;
-
         // 雑だけど、 glDrawPixels() を呼ぶところまでやる
         for (std::size_t i = 0; i < height_; i++) {
             for (std::size_t j = 0; j < width_; j++) {
-                const std::uint8_t val = ((i + j) * frame_ / 10) % 255;
+                const std::uint8_t val = ((i + j) * 10) % 255;
                 buffer_[i * width_ + j].x = val;
                 buffer_[i * width_ + j].y = val;
                 buffer_[i * width_ + j].z = val;
                 buffer_[i * width_ + j].w = val;
             }
         }
-        glDrawPixels(width_, height_, GL_RGBA, GL_UNSIGNED_BYTE, buffer_.data());
+        glDrawPixels(width_, height_, GL_RGBA, GL_UNSIGNED_BYTE, buffer_.get());
     }
 
 private:
@@ -51,7 +48,14 @@ private:
 
     GLuint pbo_;
 
-    std::vector<Color> buffer_;
+    // color buffer
+    std::unique_ptr<Color[]> buffer_;
 
-    std::size_t frame_;
+    std::unique_ptr<float[]> velocity_;
+
+    std::unique_ptr<float[]> prev_velocity_;
+
+    std::unique_ptr<float[]> pressure_;
+
+    std::unique_ptr<float[]> prev_pressure_;
 };

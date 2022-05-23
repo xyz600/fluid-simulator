@@ -81,7 +81,6 @@ int main()
     glBufferData(GL_PIXEL_UNPACK_BUFFER, 4 * sizeof(GLubyte) * WIDTH * HEIGHT, NULL, GL_DYNAMIC_DRAW);
 
     auto simulator = CPUFluidSimulator(WIDTH, HEIGHT, pbo);
-    simulator.initialize();
 
     while (!glfwWindowShouldClose(window)) {
 
@@ -112,7 +111,6 @@ int main()
             ImGui::RadioButton("Circle", &state.shape, 1);
             ImGui::SameLine();
             ImGui::RadioButton("None", &state.shape, 2);
-            
             ImGui::End();
         }
 
