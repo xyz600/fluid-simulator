@@ -5,9 +5,9 @@
 // glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 // glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);   // THE MAGIC LINE #2
 
-#include "imgui/imgui.h" // version 1.78 and 1.60
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+#include "imgui.h" // version 1.78 and 1.60
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 #include <GL/glew.h> // GL
 #include <GLFW/glfw3.h>
