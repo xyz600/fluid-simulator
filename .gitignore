@@ -34,3 +34,4 @@
 # self
 .vscode
 .ccls-cache
+imgui.ini
