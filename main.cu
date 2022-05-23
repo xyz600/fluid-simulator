@@ -5,7 +5,7 @@
 // glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 // glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);   // THE MAGIC LINE #2
 
-#include "imgui.h" // version 1.78 and 1.60
+#include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
@@ -70,6 +70,7 @@ int main()
     // GLFW + OpenGL
     if (!glfwInit())
         exit(EXIT_FAILURE);
+
     if (atexit(glfwTerminate)) {
         glfwTerminate();
         exit(EXIT_FAILURE);
@@ -80,8 +81,11 @@ int main()
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "gl-cuda-test", NULL, NULL);
     if (!window)
         exit(EXIT_FAILURE);
+
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
+    
+
     if (glewInit() != GLEW_OK)
         exit(EXIT_FAILURE);
 
@@ -102,6 +106,7 @@ int main()
     gpuErrchk(cudaGraphicsGLRegisterBuffer(&cudapbo, pbo, cudaGraphicsRegisterFlagsWriteDiscard));
 
     while (!glfwWindowShouldClose(window)) {
+
         kernelUpdate(WIDTH, HEIGHT);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo); // THE MAGIC LINE #1
         glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
