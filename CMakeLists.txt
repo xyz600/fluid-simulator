@@ -18,6 +18,7 @@ add_executable(fluid-simulator main.cpp)
 # set_target_properties(fluid-simulator PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 # set_target_properties(fluid-simulator PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
+set_target_properties(fluid-simulator PROPERTIES CXX_COMPILER clang++)
 set_target_properties(fluid-simulator PROPERTIES CXX_STANDARD 17)
 set_target_properties(fluid-simulator PROPERTIES CXX_STANDARD_REQUIRED ON)
 
