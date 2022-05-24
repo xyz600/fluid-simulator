@@ -80,7 +80,7 @@ int main()
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
     glBufferData(GL_PIXEL_UNPACK_BUFFER, 4 * sizeof(GLubyte) * WIDTH * HEIGHT, NULL, GL_DYNAMIC_DRAW);
 
-    auto simulator = CPUFluidSimulator(WIDTH, HEIGHT, pbo, 1.0);
+    auto simulator = CPUFluidSimulator(WIDTH, HEIGHT, pbo, 1.0, 1e-3);
 
     while (!glfwWindowShouldClose(window)) {
 

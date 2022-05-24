@@ -23,8 +23,8 @@ public:
         assert(1 <= x && x < m_width_ - 1 && 1 <= y && y < m_height_ - 1);
         const auto index = y * m_width_ + x;
         // x < 0 なら左に流れるので、右（x + 1）から取ってくる。 x > 0 から逆に x - 1 から取ってくる
-        const auto x_val = m_velocity_[index].x() < 0 ? m_buffer_[index + 1] : m_buffer_[index - 1];
-        const auto y_val = m_velocity_[index].y() < 0 ? m_buffer_[index + m_width_] : m_buffer_[index - m_width_];
+        const auto x_val = m_velocity_[index].x() < 0 ? m_buffer_[index + 1] - m_buffer_[index] : m_buffer_[index] - m_buffer_[index - 1];
+        const auto y_val = m_velocity_[index].y() < 0 ? m_buffer_[index + m_width_] - m_buffer_[index] : m_buffer_[index] - m_buffer_[index - m_width_];
 
         return std::make_pair(x_val, y_val);
     }
@@ -54,7 +54,7 @@ using Color = Vec<std::uint8_t, 4>;
 
 class CPUFluidSimulator {
 public:
-    CPUFluidSimulator(const std::size_t width, const std::size_t height, GLuint pbo, float Re)
+    CPUFluidSimulator(const std::size_t width, const std::size_t height, GLuint pbo, float Re, float dt)
         : m_width_(width)
         , m_height_(height)
         , m_pbo_(pbo)
@@ -65,12 +65,14 @@ public:
         , m_prev_pressure_(new float[height * width])
         , m_fixed_(new bool[height * width])
         , m_Re_(Re)
+        , m_dt_(dt)
     {
         for (std::size_t y = 0; y < 100; y++) {
             const auto index = y * m_width_ + 0;
             m_velocity_[index].x() = 5.0;
-            m_velocity_[index + 1].x() = 5.0;
             m_prev_velocity_[index].x() = 5.0;
+
+            m_velocity_[index + 1].x() = 5.0;
             m_prev_velocity_[index + 1].x() = 5.0;
         }
     }
@@ -98,8 +100,14 @@ public:
                 const auto [dx3, dy3] = velocity_calculator.second_order_diff(y, x);
                 const auto term3 = (dx3 + dy3) / m_Re_;
 
-                m_velocity_[index] = term1 + term2 + term3;
+                m_velocity_[index] = (term1 + term2 + term3) * m_dt_;
+            }
+        }
 
+        // 境界条件の 1px 内側に関して、全て更新する
+        for (std::size_t y = 0; y < m_height_; y++) {
+            for (std::size_t x = 0; x < m_width_; x++) {
+                const auto index = y * m_width_ + x;
                 m_min_velocity_ = min(m_min_velocity_, m_velocity_[index]);
                 m_max_velocity_ = max(m_max_velocity_, m_velocity_[index]);
             }
@@ -158,7 +166,7 @@ public:
 
                 if (i == 0 && j == 0) {
                     std::cerr << "minmax velocity: " << m_min_velocity_ << ", " << m_max_velocity_ << std::endl;
-                    std::cerr << "velocity: " << m_velocity_[0] << " " << m_velocity_[1] << std::endl;
+                    std::cerr << "velocity: " << m_velocity_[0] << " " << m_velocity_[1] << " " << m_velocity_[2] << std::endl;
                 }
 
                 m_buffer_[index].x() = x;
@@ -199,4 +207,6 @@ private:
 
     // レイノルズ数
     float m_Re_;
+
+    float m_dt_;
 };
