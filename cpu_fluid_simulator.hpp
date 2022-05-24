@@ -22,15 +22,30 @@ public:
 
     std::pair<T, T> first_order_diff(const std::size_t y, const std::size_t x) const
     {
+        assert(1 <= x && x < m_width_ - 1 && 1 <= y && y < m_height_ - 1);
+        const auto index = y * m_width_ + x;
+        // x < 0 なら左に流れるので、右（x + 1）から取ってくる。 x > 0 から逆に x - 1 から取ってくる
+        const auto x_val = m_velocity_[index].x() < 0 ? m_buffer_[index + 1] : m_buffer_[index - 1];
+        const auto y_val = m_velocity_[index].y() < 0 ? m_buffer_[index + m_width_] : m_buffer_[index - m_width_];
+
+        return std::make_pair(x_val, y_val);
     }
 
     std::pair<T, T> second_order_diff(const std::size_t y, const std::size_t x) const
     {
+        assert(1 <= x && x < m_width_ - 1 && 1 <= y && y < m_height_ - 1);
+
+        const auto index = y * m_width_ + x;
+        const auto x_val = m_buffer_[index + 1] + m_buffer_[index - 1] - 2 * m_buffer_[index];
+        const auto y_val = m_buffer_[index + m_width_] + m_buffer_[index - m_width_] - 2 * m_buffer_[index];
+
+        return std::make_pair(x_val, y_val);
     }
 
 private:
-    Vec2f* m_velocity_;
     T* m_buffer_;
+
+    Vec2f* m_velocity_;
 
     std::size_t m_width_;
 
@@ -96,6 +111,10 @@ private:
     std::unique_ptr<Vec2f[]> pressure_;
 
     std::unique_ptr<Vec2f[]> prev_pressure_;
+
+    std::unique_ptr<Color[]> color_;
+
+    std::unique_ptr<Color[]> prev_color_;
 
     std::unique_ptr<bool[]> fixed_;
 };
