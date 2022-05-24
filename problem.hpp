@@ -144,8 +144,14 @@ template <typename T, std::size_t N>
 std::ostream& operator<<(std::ostream& out, const Vec<T, N>& vec)
 {
     out << "[";
+    bool first = true;
     for (const auto v : vec) {
-        out << v << ", ";
+        if (first) {
+            first = false;
+        } else {
+            out << ", ";
+        }
+        out << v;
     }
     out << "]";
     return out;
@@ -212,21 +218,21 @@ T dot(const Vec<T, N>& v1, const Vec<T, N>& v2)
 }
 
 template <typename T, std::size_t N>
-T max(const Vec<T, N>& v1, const Vec<T, N>& v2)
+Vec<T, N> max(const Vec<T, N>& v1, const Vec<T, N>& v2)
 {
-    T ret = 0;
+    Vec<T, N> ret;
     for (std::size_t i = 0; i < N; i++) {
-        ret += std::max(v1[i], v2[i]);
+        ret[i] = std::max(v1[i], v2[i]);
     }
     return ret;
 }
 
 template <typename T, std::size_t N>
-T min(const Vec<T, N>& v1, const Vec<T, N>& v2)
+Vec<T, N> min(const Vec<T, N>& v1, const Vec<T, N>& v2)
 {
-    T ret = 0;
+    Vec<T, N> ret;
     for (std::size_t i = 0; i < N; i++) {
-        ret += std::min(v1[i], v2[i]);
+        ret[i] = std::min(v1[i], v2[i]);
     }
     return ret;
 }

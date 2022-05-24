@@ -69,7 +69,9 @@ public:
         for (std::size_t y = 0; y < 100; y++) {
             const auto index = y * m_width_ + 0;
             m_velocity_[index].x() = 5.0;
+            m_velocity_[index + 1].x() = 5.0;
             m_prev_velocity_[index].x() = 5.0;
+            m_prev_velocity_[index + 1].x() = 5.0;
         }
     }
 
@@ -99,14 +101,14 @@ public:
                 m_velocity_[index] = term1 + term2 + term3;
 
                 m_min_velocity_ = min(m_min_velocity_, m_velocity_[index]);
-                m_min_velocity_ = max(m_max_velocity_, m_velocity_[index]);
+                m_max_velocity_ = max(m_max_velocity_, m_velocity_[index]);
             }
         }
     }
 
     void update_pressure()
     {
-        const auto velocity_calculator = UpwindDifferenceCalculator<Vec2f>(m_prev_velocity_.get(), m_prev_velocity_.get(), m_height_, m_width_);
+        const auto velocity_calculator = UpwindDifferenceCalculator<Vec2f>(m_velocity_.get(), m_velocity_.get(), m_height_, m_width_);
 
         constexpr std::size_t MaxIter = 5;
 
@@ -155,6 +157,7 @@ public:
                 const auto y = static_cast<std::uint8_t>(255.0 * (m_velocity_[index].y() - m_min_velocity_.y()) / (m_max_velocity_.y() - m_min_velocity_.y()));
 
                 if (i == 0 && j == 0) {
+                    std::cerr << "minmax velocity: " << m_min_velocity_ << ", " << m_max_velocity_ << std::endl;
                     std::cerr << "velocity: " << m_velocity_[0] << " " << m_velocity_[1] << std::endl;
                 }
 
