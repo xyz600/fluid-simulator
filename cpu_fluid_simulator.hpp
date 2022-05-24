@@ -66,6 +66,11 @@ public:
         , m_fixed_(new bool[height * width])
         , m_Re_(Re)
     {
+        for (std::size_t y = 0; y < 100; y++) {
+            const auto index = y * m_width_ + 0;
+            m_velocity_[index].x() = 5.0;
+            m_prev_velocity_[index].x() = 5.0;
+        }
     }
 
     void update_velocity()
@@ -73,6 +78,9 @@ public:
         const auto velocity_calculator = UpwindDifferenceCalculator<Vec2f>(m_prev_velocity_.get(), m_prev_velocity_.get(), m_height_, m_width_);
 
         const auto pressure_calculator = UpwindDifferenceCalculator<float>(m_prev_pressure_.get(), m_prev_velocity_.get(), m_height_, m_width_);
+
+        m_max_velocity_.fill(std::numeric_limits<float>::lowest());
+        m_min_velocity_.fill(std::numeric_limits<float>::max());
 
         // 境界条件の 1px 内側に関して、全て更新する
         for (std::size_t y = 1; y < m_height_ - 1; y++) {
@@ -89,6 +97,9 @@ public:
                 const auto term3 = (dx3 + dy3) / m_Re_;
 
                 m_velocity_[index] = term1 + term2 + term3;
+
+                m_min_velocity_ = min(m_min_velocity_, m_velocity_[index]);
+                m_min_velocity_ = max(m_max_velocity_, m_velocity_[index]);
             }
         }
     }
@@ -106,6 +117,10 @@ public:
                     const auto index = y * m_width_ + x;
 
                     const auto [dx, dy] = velocity_calculator.first_order_diff(y, x);
+
+                    const auto term = (dx.x() * dx.x() + dy.y() * dy.y() + 2 * dy.x() * dx.y()) / m_Re_;
+
+                    m_pressure_[index] = (m_prev_pressure_[index + 1] + m_prev_pressure_[index - 1] + m_prev_pressure_[index + m_width_] + m_prev_pressure_[index - m_width_] - term) / 4.0f;
                 }
             }
 
@@ -135,9 +150,17 @@ public:
         for (std::size_t i = 0; i < m_height_; i++) {
             for (std::size_t j = 0; j < m_width_; j++) {
                 const auto index = i * m_width_ + j;
-                m_buffer_[index].x() = (i + j) % 255;
-                m_buffer_[index].y() = (i * j) % 255;
-                m_buffer_[index].z() = (i * 25500000 - j) % 255;
+
+                const auto x = static_cast<std::uint8_t>(255.0 * (m_velocity_[index].x() - m_min_velocity_.x()) / (m_max_velocity_.x() - m_min_velocity_.x()));
+                const auto y = static_cast<std::uint8_t>(255.0 * (m_velocity_[index].y() - m_min_velocity_.y()) / (m_max_velocity_.y() - m_min_velocity_.y()));
+
+                if (i == 0 && j == 0) {
+                    std::cerr << "velocity: " << m_velocity_[0] << " " << m_velocity_[1] << std::endl;
+                }
+
+                m_buffer_[index].x() = x;
+                m_buffer_[index].y() = y;
+                m_buffer_[index].z() = 0;
                 m_buffer_[index].w() = 255;
             }
         }
@@ -167,6 +190,9 @@ private:
     std::unique_ptr<Color[]> m_prev_color_;
 
     std::unique_ptr<bool[]> m_fixed_;
+
+    Vec2f m_min_velocity_;
+    Vec2f m_max_velocity_;
 
     // レイノルズ数
     float m_Re_;

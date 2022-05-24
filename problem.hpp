@@ -21,6 +21,11 @@ public:
         m_data_.fill(0);
     }
 
+    void fill(const T val)
+    {
+        m_data_.fill(val);
+    }
+
 private:
     template <class... Args>
     void inner_assign(const std::size_t index)
@@ -99,14 +104,24 @@ public:
     }
 
     // 手抜き
-    auto begin()
+    auto begin() const
     {
         return m_data_.begin();
     }
 
-    auto end()
+    auto cbegin() const
+    {
+        return m_data_.cbegin();
+    }
+
+    auto end() const
     {
         return m_data_.end();
+    }
+
+    auto cend() const
+    {
+        return m_data_.cend();
     }
 
 private:
@@ -129,7 +144,7 @@ template <typename T, std::size_t N>
 std::ostream& operator<<(std::ostream& out, const Vec<T, N>& vec)
 {
     out << "[";
-    for (auto v : vec) {
+    for (const auto v : vec) {
         out << v << ", ";
     }
     out << "]";
@@ -192,6 +207,26 @@ T dot(const Vec<T, N>& v1, const Vec<T, N>& v2)
     T ret = 0;
     for (std::size_t i = 0; i < N; i++) {
         ret += v1[i] * v2[i];
+    }
+    return ret;
+}
+
+template <typename T, std::size_t N>
+T max(const Vec<T, N>& v1, const Vec<T, N>& v2)
+{
+    T ret = 0;
+    for (std::size_t i = 0; i < N; i++) {
+        ret += std::max(v1[i], v2[i]);
+    }
+    return ret;
+}
+
+template <typename T, std::size_t N>
+T min(const Vec<T, N>& v1, const Vec<T, N>& v2)
+{
+    T ret = 0;
+    for (std::size_t i = 0; i < N; i++) {
+        ret += std::min(v1[i], v2[i]);
     }
     return ret;
 }
