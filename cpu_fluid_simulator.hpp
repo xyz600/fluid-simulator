@@ -55,17 +55,24 @@ using Color = Vec<std::uint8_t, 4>;
 
 class CPUFluidSimulator {
 public:
-    CPUFluidSimulator(Config&& config)
+    CPUFluidSimulator(const Config& config)
         : m_width_(config.width)
         , m_height_(config.height)
         , m_velocity_(new Vec2f[config.size()])
         , m_prev_velocity_(new Vec2f[config.size()])
         , m_pressure_(new float[config.size()])
         , m_prev_pressure_(new float[config.size()])
-        , m_fixed_(std::move(config.fixed))
+        , m_fixed_(new bool[config.size()])
         , m_Re_(config.Re)
         , m_dt_(config.dt)
     {
+        std::copy(config.fixed.get(), config.fixed.get() + config.size(), m_fixed_.get());
+        initialize(config);
+    }
+
+    void initialize(const Config& config)
+    {
+        std::fill(&m_velocity_[0], &m_velocity_[0] + m_height_ * m_width_, Vec2f { 0.0, 0.0 });
         for (std::size_t y = 1; y < m_height_ - 1; y++) {
             const auto index = y * m_width_ + 0;
             m_velocity_[index].x() = 5.0;
@@ -110,9 +117,7 @@ public:
         const auto velocity_calculator = UpwindDifferenceCalculator<Vec2f>(m_velocity_.get(), m_velocity_.get(), m_height_, m_width_);
 
         constexpr std::size_t MaxIter = 4;
-        for (std::size_t i = 0; i < m_height_ * m_width_; i++) {
-            m_pressure_[i] = 0;
-        }
+        std::fill(&m_pressure_[0], &m_pressure_[0] + m_height_ * m_width_, 0.0);
 
         for (std::size_t iter = 0; iter < MaxIter; iter++) {
             m_pressure_.swap(m_prev_pressure_);
@@ -128,7 +133,7 @@ public:
                     }
 
                     const auto [dx, dy] = velocity_calculator.first_order_diff(y, x);
-                    const auto term = (dx.x() * dx.x() + dy.y() * dy.y() + 2 * dy.x() * dx.y()) / m_Re_;
+                    const auto term = m_dt_ * (dx.x() * dx.x() + dy.y() * dy.y() + 2 * dy.x() * dx.y()) / m_Re_;
 
                     m_pressure_[index] = (m_prev_pressure_[index + 1] + m_prev_pressure_[index - 1] + m_prev_pressure_[index + m_width_] + m_prev_pressure_[index - m_width_] + term) / 4.0f;
                 }

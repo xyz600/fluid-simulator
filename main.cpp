@@ -94,7 +94,7 @@ int main()
     ViewerState state;
 
     auto config = Config(HEIGHT, WIDTH);
-    config.Re = 1e2;
+    config.Re = 1e0;
     config.dt = 1e-1;
     config.pbo = pbo;
     config.scale = SCALE;
@@ -108,13 +108,18 @@ int main()
         config.set_fixed(HEIGHT - 1, x);
     }
 
-    for (std::size_t y = HEIGHT / 2 - 10; y <= HEIGHT / 2 + 10; y++) {
-        for (std::size_t x = WIDTH / 2 - 10; x <= WIDTH / 2 + 10; x++) {
-            config.set_fixed(y, x);
+    for (std::size_t y = 0; y < HEIGHT; y++) {
+        for (std::size_t x = 0; x < WIDTH; x++) {
+            const auto dy = (y - HEIGHT / 2);
+            const auto dx = (x - WIDTH / 2);
+            const auto dist2 = dy * dy + dx * dx;
+            if (dist2 < 100) {
+                config.set_fixed(y, x);
+            }
         }
     }
 
-    auto simulator = CPUFluidSimulator(std::move(config));
+    auto simulator = CPUFluidSimulator(config);
 
     auto renderer = Renderer(HEIGHT, WIDTH, SCALE, pbo);
 
@@ -158,6 +163,8 @@ int main()
             state.show_config = !state.show_config;
         } else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_A))) {
             state.stopped = !state.stopped;
+        } else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Z))) {
+            simulator.initialize(config);
         }
 
         // 設定周り色々
