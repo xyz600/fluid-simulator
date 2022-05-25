@@ -137,7 +137,7 @@ public:
                     }
 
                     const auto [dx, dy] = velocity_calculator.first_order_diff(y, x);
-                    const auto term = m_dt_ * (dx.x() * dx.x() + dy.y() * dy.y() + 2 * dy.x() * dx.y()) / m_Re_;
+                    const auto term = -(dx.x() + dy.y()) / m_dt_ + dx.x() * dx.x() + dy.y() * dy.y() + 2 * dy.x() * dx.y();
 
                     m_pressure_[index] = (m_prev_pressure_[index + 1] + m_prev_pressure_[index - 1] + m_prev_pressure_[index + m_width_] + m_prev_pressure_[index - m_width_] + term) / 4.0f;
                 }
