@@ -3,12 +3,43 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <iomanip>
 #include <iostream>
 
-struct Problem {
-    std::size_t width;
+enum class PrintType {
+    VELOCITY,
+    PRESSURE,
+    FIXED,
+};
 
+struct Config {
+    std::size_t width;
     std::size_t height;
+    GLuint pbo;
+    float Re;
+    float dt;
+
+    std::unique_ptr<bool[]> fixed;
+
+    Config(const std::size_t h, const std::size_t w)
+        : height(h)
+        , width(w)
+        , fixed(new bool[h * w])
+    {
+        for (std::size_t i = 0; i < size(); i++) {
+            fixed[i] = false;
+        }
+    }
+
+    void set_fixed(std::size_t y, std::size_t x)
+    {
+        fixed[y * width + x] = true;
+    }
+
+    std::size_t size() const
+    {
+        return width * height;
+    }
 };
 
 template <typename T, std::size_t N>
@@ -140,7 +171,7 @@ std::ostream& operator<<(std::ostream& out, const Vec<T, N>& vec)
         } else {
             out << ", ";
         }
-        out << v;
+        out << std::fixed << v;
     }
     out << "]";
     return out;

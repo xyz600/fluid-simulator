@@ -12,21 +12,24 @@
 #include <GL/glew.h> // GL
 #include <GLFW/glfw3.h>
 
+#include <cmath>
 #include <iostream>
-#include <stdlib.h>
 
 #include "cpu_fluid_simulator.hpp"
+#include "problem.hpp"
 
 struct ViewerState {
     bool show_config;
     ImVec4 clear_color;
 
-    int shape;
+    PrintType type;
+    int type_int;
 
     ViewerState()
         : show_config(true)
         , clear_color(ImVec4(0.45f, 0.55f, 0.60f, 1.00f))
-        , shape(0)
+        , type(PrintType::VELOCITY)
+        , type_int(0)
     {
     }
 };
@@ -50,8 +53,8 @@ int main()
         std::cerr << msg << std::endl;
     });
 
-    constexpr std::size_t WIDTH = 1920;
-    constexpr std::size_t HEIGHT = 1080;
+    constexpr std::size_t WIDTH = 200;
+    constexpr std::size_t HEIGHT = 200;
 
     GLuint pbo;
 
@@ -80,7 +83,29 @@ int main()
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
     glBufferData(GL_PIXEL_UNPACK_BUFFER, 4 * sizeof(GLubyte) * WIDTH * HEIGHT, NULL, GL_DYNAMIC_DRAW);
 
-    auto simulator = CPUFluidSimulator(WIDTH, HEIGHT, pbo, 1.0, 0.12);
+    auto config = Config(HEIGHT, WIDTH);
+    config.Re = 1e2;
+    config.dt = 1e-1;
+    config.pbo = pbo;
+
+    for (std::size_t y = 0; y < HEIGHT; y++) {
+        config.set_fixed(y, 0);
+        config.set_fixed(y, WIDTH - 1);
+    }
+    for (std::size_t x = 0; x < WIDTH; x++) {
+        config.set_fixed(0, x);
+        config.set_fixed(HEIGHT - 1, x);
+    }
+
+    for (std::size_t y = 90; y <= 110; y++) {
+        for (std::size_t x = 90; x <= 110; x++) {
+            config.set_fixed(y, x);
+        }
+    }
+
+    auto simulator = CPUFluidSimulator(std::move(config));
+
+    std::size_t turn = 0;
 
     while (!glfwWindowShouldClose(window)) {
 
@@ -88,7 +113,7 @@ int main()
         glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-        simulator.draw_background();
+        simulator.draw_background(state.type);
 
         glfwPollEvents();
 
@@ -106,11 +131,38 @@ int main()
         // 設定周り色々
         if (state.show_config) {
             ImGui::Begin("Config");
-            ImGui::RadioButton("square", &state.shape, 0);
+
+            ImGui::RadioButton("velocity", &state.type_int, 0);
             ImGui::SameLine();
-            ImGui::RadioButton("Circle", &state.shape, 1);
+            ImGui::RadioButton("pressure", &state.type_int, 1);
             ImGui::SameLine();
-            ImGui::RadioButton("None", &state.shape, 2);
+            ImGui::RadioButton("fixed", &state.type_int, 2);
+
+            switch (state.type_int) {
+            case 0:
+                state.type = PrintType::VELOCITY;
+                break;
+            case 1:
+                state.type = PrintType::PRESSURE;
+                break;
+            case 2:
+                state.type = PrintType::FIXED;
+                break;
+            }
+
+            const auto pos = ImGui::GetMousePos();
+
+            const auto rel_x = std::round(pos.x);
+            const auto rel_y = HEIGHT - std::round(pos.y);
+
+            ImGui::Text("(rx, ry) = (%.3f, %.3f)", rel_x, rel_y);
+            if (0 <= rel_x && rel_x < WIDTH && 0 <= rel_y && rel_y < HEIGHT) {
+                const auto vec = simulator.Velocity(rel_y, rel_x);
+                ImGui::Text("(vx, vy) = (%.3f, %.3f)", vec.x(), vec.y());
+            } else {
+                ImGui::Text("(vx, vy) = ");
+            }
+
             ImGui::End();
         }
 
@@ -118,6 +170,8 @@ int main()
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
+
+        turn++;
     }
 
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0); // exit

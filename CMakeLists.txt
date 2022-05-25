@@ -8,6 +8,7 @@ project(fluid-simulator CXX)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glew CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
+find_package(OpenMP REQUIRED)
 
 add_executable(fluid-simulator main.cpp)
 
@@ -30,4 +31,5 @@ target_link_libraries(fluid-simulator PRIVATE
     imgui::imgui
     glfw
     GLEW::GLEW
+    OpenMP::OpenMP_CXX
 )
