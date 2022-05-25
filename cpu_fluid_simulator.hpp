@@ -66,7 +66,7 @@ public:
         , m_Re_(config.Re)
         , m_dt_(config.dt)
     {
-        for (std::size_t y = 0; y < m_height_; y++) {
+        for (std::size_t y = 1; y < m_height_ - 1; y++) {
             const auto index = y * m_width_ + 0;
             m_velocity_[index].x() = 5.0;
             m_prev_velocity_[index].x() = 5.0;
@@ -117,8 +117,6 @@ public:
         for (std::size_t iter = 0; iter < MaxIter; iter++) {
             m_pressure_.swap(m_prev_pressure_);
 
-            float diff = 0;
-
             // 境界条件の 1px 内側に関して、全て更新する
 #pragma omp parallel for num_threads(10)
             for (std::size_t y = 0; y < m_height_; y++) {
@@ -133,7 +131,6 @@ public:
                     const auto term = (dx.x() * dx.x() + dy.y() * dy.y() + 2 * dy.x() * dx.y()) / m_Re_;
 
                     m_pressure_[index] = (m_prev_pressure_[index + 1] + m_prev_pressure_[index - 1] + m_prev_pressure_[index + m_width_] + m_prev_pressure_[index - m_width_] + term) / 4.0f;
-                    diff += std::abs(m_pressure_[index] - m_prev_pressure_[index]);
                 }
             }
         }

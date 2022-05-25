@@ -26,11 +26,14 @@ struct ViewerState {
     PrintType type;
     int type_int;
 
+    bool stopped;
+
     ViewerState()
         : show_config(true)
         , clear_color(ImVec4(0.45f, 0.55f, 0.60f, 1.00f))
         , type(PrintType::VELOCITY)
         , type_int(0)
+        , stopped(false)
     {
     }
 };
@@ -126,18 +129,19 @@ int main()
         glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-        constexpr std::size_t MAX_ITER = 3;
+        if (!state.stopped) {
 
-        const auto start = std::chrono::high_resolution_clock::now();
-        for (std::size_t iter = 0; iter < MAX_ITER; iter++) {
-            simulator.update();
+            constexpr std::size_t MAX_ITER = 3;
+
+            const auto start = std::chrono::high_resolution_clock::now();
+            for (std::size_t iter = 0; iter < MAX_ITER; iter++) {
+                simulator.update();
+            }
+            const auto end = std::chrono::high_resolution_clock::now();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+            std::cerr << "elapsed: " << elapsed << "[ms]" << std::endl;
         }
-        const auto end = std::chrono::high_resolution_clock::now();
-        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        std::cerr << "elapsed: " << elapsed << "[ms]" << std::endl;
-
         render_config.type = state.type;
-
         // draw background
         renderer.doit(simulator, render_config);
 
@@ -152,6 +156,8 @@ int main()
             break;
         } else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Tab))) {
             state.show_config = !state.show_config;
+        } else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_A))) {
+            state.stopped = !state.stopped;
         }
 
         // 設定周り色々
@@ -182,11 +188,19 @@ int main()
             const auto rel_y = HEIGHT - std::round(pos.y / config.scale);
 
             ImGui::Text("(rx, ry) = (%.3f, %.3f)", rel_x, rel_y);
+            // velocity
             if (0 <= rel_x && rel_x < WIDTH && 0 <= rel_y && rel_y < HEIGHT) {
                 const auto vec = simulator.velocity(rel_y, rel_x);
                 ImGui::Text("(vx, vy) = (%.3f, %.3f)", vec.x(), vec.y());
             } else {
                 ImGui::Text("(vx, vy) = ");
+            }
+            // pressure
+            if (0 <= rel_x && rel_x < WIDTH && 0 <= rel_y && rel_y < HEIGHT) {
+                const auto p = simulator.pressure(rel_y, rel_x);
+                ImGui::Text("p = %.3f", p);
+            } else {
+                ImGui::Text("p = ");
             }
 
             ImGui::SliderFloat("velocity scale", &render_config.velocity_range, 1e-1f, 1e4f, "velocity scale: %.4f", ImGuiSliderFlags_Logarithmic);
