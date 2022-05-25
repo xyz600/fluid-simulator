@@ -95,7 +95,7 @@ int main()
 
     auto config = Config(HEIGHT, WIDTH);
     config.Re = 1e0;
-    config.dt = 1e-1;
+    config.dt = 1e-2;
     config.pbo = pbo;
     config.scale = SCALE;
 
@@ -113,7 +113,7 @@ int main()
             const auto dy = (y - HEIGHT / 2);
             const auto dx = (x - WIDTH / 2);
             const auto dist2 = dy * dy + dx * dx;
-            if (dist2 < 100) {
+            if (dist2 <= 900) {
                 config.set_fixed(y, x);
             }
         }
@@ -170,6 +170,10 @@ int main()
         // 設定周り色々
         if (state.show_config) {
             ImGui::Begin("Config");
+
+            ImGui::Text("Re = %.3f", config.Re);
+            ImGui::Text("simulator size: (%ld, %ld)", WIDTH, HEIGHT);
+            ImGui::Text("scale: %ld", SCALE);
 
             ImGui::RadioButton("velocity", &state.type_int, 0);
             ImGui::SameLine();

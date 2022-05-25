@@ -77,7 +77,11 @@ public:
             const auto index = y * m_width_ + 0;
             m_velocity_[index].x() = 5.0;
             m_prev_velocity_[index].x() = 5.0;
+
+            m_velocity_[index + m_width_ - 1].x() = 5.0;
+            m_prev_velocity_[index + m_width_ - 1].x() = 5.0;
         }
+        std::fill(&m_pressure_[0], &m_pressure_[0] + m_height_ * m_width_, 0.0);
     }
 
     void update_velocity()
@@ -116,7 +120,7 @@ public:
     {
         const auto velocity_calculator = UpwindDifferenceCalculator<Vec2f>(m_velocity_.get(), m_velocity_.get(), m_height_, m_width_);
 
-        constexpr std::size_t MaxIter = 4;
+        constexpr std::size_t MaxIter = 6;
         std::fill(&m_pressure_[0], &m_pressure_[0] + m_height_ * m_width_, 0.0);
 
         for (std::size_t iter = 0; iter < MaxIter; iter++) {
