@@ -17,6 +17,7 @@
 
 #include "cpu_fluid_simulator.hpp"
 #include "problem.hpp"
+#include "renderer.hpp"
 
 struct ViewerState {
     bool show_config;
@@ -36,6 +37,15 @@ struct ViewerState {
 
 int main()
 {
+    // config
+    constexpr std::size_t WIDTH = 200;
+    constexpr std::size_t HEIGHT = 200;
+
+    constexpr std::size_t SCALE = 6;
+
+    constexpr std::size_t WINDOW_WIDTH = WIDTH * SCALE;
+    constexpr std::size_t WINDOW_HEIGHT = HEIGHT * SCALE;
+
     // GLFW + OpenGL
     if (!glfwInit())
         exit(EXIT_FAILURE);
@@ -53,12 +63,7 @@ int main()
         std::cerr << msg << std::endl;
     });
 
-    constexpr std::size_t WIDTH = 200;
-    constexpr std::size_t HEIGHT = 200;
-
-    GLuint pbo;
-
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Fluid Simulator", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Fluid Simulator", nullptr, nullptr);
 
     if (!window)
         exit(EXIT_FAILURE);
@@ -76,17 +81,20 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    ViewerState state;
+    GLuint pbo;
 
     // CUDA with GL interop
     glGenBuffers(1, &pbo); // make & register PBO
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, 4 * sizeof(GLubyte) * WIDTH * HEIGHT, NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, 4 * sizeof(GLubyte) * WINDOW_WIDTH * WINDOW_HEIGHT, NULL, GL_DYNAMIC_DRAW);
+
+    ViewerState state;
 
     auto config = Config(HEIGHT, WIDTH);
     config.Re = 1e2;
     config.dt = 1e-1;
     config.pbo = pbo;
+    config.scale = SCALE;
 
     for (std::size_t y = 0; y < HEIGHT; y++) {
         config.set_fixed(y, 0);
@@ -97,14 +105,19 @@ int main()
         config.set_fixed(HEIGHT - 1, x);
     }
 
-    for (std::size_t y = 90; y <= 110; y++) {
-        for (std::size_t x = 90; x <= 110; x++) {
+    for (std::size_t y = HEIGHT / 2 - 10; y <= HEIGHT / 2 + 10; y++) {
+        for (std::size_t x = WIDTH / 2 - 10; x <= WIDTH / 2 + 10; x++) {
             config.set_fixed(y, x);
         }
     }
 
     auto simulator = CPUFluidSimulator(std::move(config));
 
+    auto renderer = Renderer(HEIGHT, WIDTH, SCALE, pbo);
+
+    auto render_config = RenderConfig();
+
+    // vis
     std::size_t turn = 0;
 
     while (!glfwWindowShouldClose(window)) {
@@ -113,7 +126,20 @@ int main()
         glDrawPixels(WIDTH, HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-        simulator.draw_background(state.type);
+        constexpr std::size_t MAX_ITER = 3;
+
+        const auto start = std::chrono::high_resolution_clock::now();
+        for (std::size_t iter = 0; iter < MAX_ITER; iter++) {
+            simulator.update();
+        }
+        const auto end = std::chrono::high_resolution_clock::now();
+        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cerr << "elapsed: " << elapsed << "[ms]" << std::endl;
+
+        render_config.type = state.type;
+
+        // draw background
+        renderer.doit(simulator, render_config);
 
         glfwPollEvents();
 
@@ -152,16 +178,19 @@ int main()
 
             const auto pos = ImGui::GetMousePos();
 
-            const auto rel_x = std::round(pos.x);
-            const auto rel_y = HEIGHT - std::round(pos.y);
+            const auto rel_x = std::round(pos.x / config.scale);
+            const auto rel_y = HEIGHT - std::round(pos.y / config.scale);
 
             ImGui::Text("(rx, ry) = (%.3f, %.3f)", rel_x, rel_y);
             if (0 <= rel_x && rel_x < WIDTH && 0 <= rel_y && rel_y < HEIGHT) {
-                const auto vec = simulator.Velocity(rel_y, rel_x);
+                const auto vec = simulator.velocity(rel_y, rel_x);
                 ImGui::Text("(vx, vy) = (%.3f, %.3f)", vec.x(), vec.y());
             } else {
                 ImGui::Text("(vx, vy) = ");
             }
+
+            ImGui::SliderFloat("velocity scale", &render_config.velocity_range, 1e-1f, 1e4f, "velocity scale: %.4f", ImGuiSliderFlags_Logarithmic);
+            ImGui::SliderFloat("pressure scale", &render_config.pressure_range, 1e-4f, 1e0f, "pressure scale: %.4f", ImGuiSliderFlags_Logarithmic);
 
             ImGui::End();
         }

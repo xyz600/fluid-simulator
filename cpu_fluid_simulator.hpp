@@ -58,8 +58,6 @@ public:
     CPUFluidSimulator(Config&& config)
         : m_width_(config.width)
         , m_height_(config.height)
-        , m_pbo_(config.pbo)
-        , m_buffer_(new Color[config.size()])
         , m_velocity_(new Vec2f[config.size()])
         , m_prev_velocity_(new Vec2f[config.size()])
         , m_pressure_(new float[config.size()])
@@ -71,6 +69,7 @@ public:
         for (std::size_t y = 0; y < m_height_; y++) {
             const auto index = y * m_width_ + 0;
             m_velocity_[index].x() = 5.0;
+            m_prev_velocity_[index].x() = 5.0;
         }
     }
 
@@ -83,9 +82,9 @@ public:
         const auto pressure_calculator = UpwindDifferenceCalculator<float>(m_prev_pressure_.get(), m_prev_velocity_.get(), m_height_, m_width_);
 
         // 境界条件の 1px 内側に関して、全て更新する
-#pragma omp parallel for
-        for (std::size_t y = 1; y < m_height_ - 1; y++) {
-            for (std::size_t x = 1; x < m_width_ - 1; x++) {
+#pragma omp parallel for num_threads(10)
+        for (std::size_t y = 0; y < m_height_; y++) {
+            for (std::size_t x = 0; x < m_width_; x++) {
                 const auto index = y * m_width_ + x;
 
                 if (m_fixed_[index]) {
@@ -110,7 +109,7 @@ public:
     {
         const auto velocity_calculator = UpwindDifferenceCalculator<Vec2f>(m_velocity_.get(), m_velocity_.get(), m_height_, m_width_);
 
-        constexpr std::size_t MaxIter = 2;
+        constexpr std::size_t MaxIter = 4;
         for (std::size_t i = 0; i < m_height_ * m_width_; i++) {
             m_pressure_[i] = 0;
         }
@@ -121,9 +120,9 @@ public:
             float diff = 0;
 
             // 境界条件の 1px 内側に関して、全て更新する
-#pragma omp parallel for
-            for (std::size_t y = 1; y < m_height_ - 1; y++) {
-                for (std::size_t x = 1; x < m_width_ - 1; x++) {
+#pragma omp parallel for num_threads(10)
+            for (std::size_t y = 0; y < m_height_; y++) {
+                for (std::size_t x = 0; x < m_width_; x++) {
                     const auto index = y * m_width_ + x;
 
                     if (m_fixed_[index]) {
@@ -143,63 +142,28 @@ public:
     void update()
     {
         update_velocity();
-
         update_pressure();
     }
 
-    void draw_background(const PrintType type)
-    {
-        const auto start = std::chrono::high_resolution_clock::now();
-        // 雑だけど、 glDrawPixels() を呼ぶところまでやる
-        update();
-        const auto end = std::chrono::high_resolution_clock::now();
-        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        std::cerr << "elapsed: " << elapsed << "[ms]" << std::endl;
-
-#pragma omp parallel for
-        for (std::size_t i = 0; i < m_height_; i++) {
-            for (std::size_t j = 0; j < m_width_; j++) {
-                const auto index = i * m_width_ + j;
-
-                const auto x = static_cast<std::uint8_t>(255.0 * (m_velocity_[index].x() / 5.0));
-                const auto y = static_cast<std::uint8_t>(255.0 * (m_velocity_[index].y() / 5.0));
-
-                const auto p = static_cast<std::uint8_t>(255.0 * m_pressure_[index]);
-
-                if (type == PrintType::PRESSURE) {
-                    m_buffer_[index].x() = p;
-                    m_buffer_[index].y() = p;
-                    m_buffer_[index].z() = p;
-                } else if (type == PrintType::VELOCITY) {
-                    m_buffer_[index].x() = x;
-                    m_buffer_[index].y() = y;
-                    m_buffer_[index].z() = 0;
-                } else {
-                    m_buffer_[index].x() = 255 * m_fixed_[index];
-                    m_buffer_[index].y() = 255 * m_fixed_[index];
-                    m_buffer_[index].z() = 255 * m_fixed_[index];
-                }
-
-                m_buffer_[index].w() = 255;
-            }
-        }
-        glDrawPixels(m_width_, m_height_, GL_RGBA, GL_UNSIGNED_BYTE, m_buffer_.get());
-    }
-
-    Vec2f Velocity(const std::size_t y, const std::size_t x)
+    Vec2f velocity(const std::size_t y, const std::size_t x) const
     {
         return m_velocity_[y * m_width_ + x];
+    }
+
+    float pressure(const std::size_t y, const std::size_t x) const
+    {
+        return m_pressure_[y * m_width_ + x];
+    }
+
+    bool fixed(const std::size_t y, const std::size_t x) const
+    {
+        return m_fixed_[y * m_width_ + x];
     }
 
 private:
     std::size_t m_width_;
 
     std::size_t m_height_;
-
-    GLuint m_pbo_;
-
-    // color buffer
-    std::unique_ptr<Color[]> m_buffer_;
 
     std::unique_ptr<Vec2f[]> m_velocity_;
 

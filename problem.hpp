@@ -19,6 +19,8 @@ struct Config {
     float Re;
     float dt;
 
+    std::size_t scale;
+
     std::unique_ptr<bool[]> fixed;
 
     Config(const std::size_t h, const std::size_t w)
